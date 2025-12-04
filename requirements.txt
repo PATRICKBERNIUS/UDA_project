@@ -1,0 +1,7 @@
+streamlit
+requests
+pandas
+re
+time
+plotly
+lyricsgenius
