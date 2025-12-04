@@ -6,3 +6,4 @@ lyricsgenius
 textblob
 transformers
 vaderSentiment
+beautifulsoup4
