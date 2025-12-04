@@ -152,9 +152,9 @@ def fetch_lyrics_for_songs(songs_dict, genius_token):
 
         time.sleep(0.25)
 
-        df = pd.DataFrame(results)
+    df = pd.DataFrame(results)
         
-        df['lyrics'] = df['lyrics'].str.replace(r'^.*? Lyrics', '', regex=True)
+    df['lyrics'] = df['lyrics'].str.replace(r'^.*? Lyrics', '', regex=True)
     
     return df
 
