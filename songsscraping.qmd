@@ -1,0 +1,451 @@
+---
+title: "Song Scraping Attempt"
+format: html
+---
+
+
+
+```{python}
+import pandas as pd
+from bs4 import BeautifulSoup
+import requests
+
+
+url = "https://music.apple.com/us/playlist/best-of-the-best/pl.u-XkD0YzMfDYd17j9"
+
+
+#test url
+boston_url = "https://music.apple.com/us/playlist/boston/pl.u-r2yBJJ4FPkKMbNm"
+
+
+#function to extract the id from the url
+def extract_id(playlist_url): 
+    splits = playlist_url.split('/') #splitting on /
+    id = splits[-1] #taking last group
+    return id
+
+
+#json request header
+url2 = "https://amp-api.music.apple.com/v1/catalog/us/playlists/pl.u-XkD0YzMfDYd17j9?art%5Burl%5D=f&extend=editorialArtwork%2CeditorialVideo%2Coffers%2CseoDescription%2CseoTitle%2CtrackCount&fields%5Balbums%5D=name%2Cartwork%2CplayParams%2Curl&fields%5Bapple-curators%5D=name%2Curl&fields%5Bartists%5D=name%2Cartwork%2Curl&fields%5Bcurators%5D=name%2Curl&fields%5Bsongs%5D=name%2CartistName%2CcuratorName%2CcomposerName%2Cartwork%2CplayParams%2CcontentRating%2CalbumName%2Curl%2CdurationInMillis%2CaudioTraits%2CextendedAssetUrls&format%5Bresources%5D=map&include=tracks%2Ccurator&include%5Bmusic-videos%5D=artists&include%5Bsongs%5D=artists&l=en-US&limit%5Btracks%5D=300&limit%5Bview.featured-artists%5D=15&limit%5Bview.more-by-curator%5D=15&omit%5Bresource%5D=autos&platform=web&views=featured-artists%2Cmore-by-curator"
+
+
+#public url
+base_url = f"https://amp-api.music.apple.com/v1/catalog/us/playlists/{id}"
+
+#ending for request 
+query = "?art%5Burl%5D=f&extend=editorialArtwork%2CeditorialVideo%2Coffers%2CseoDescription%2CseoTitle%2CtrackCount&fields%5Balbums%5D=name%2Cartwork%2CplayParams%2Curl&fields%5Bapple-curators%5D=name%2Curl&fields%5Bartists%5D=name%2Cartwork%2Curl&fields%5Bcurators%5D=name%2Curl&fields%5Bsongs%5D=name%2CartistName%2CcuratorName%2CcomposerName%2Cartwork%2CplayParams%2CcontentRating%2CalbumName%2Curl%2CdurationInMillis%2CaudioTraits%2CextendedAssetUrls&format%5Bresources%5D=map&include=tracks%2Ccurator&include%5Bmusic-videos%5D=artists&include%5Bsongs%5D=artists&l=en-US&limit%5Btracks%5D=300&limit%5Bview.featured-artists%5D=15&limit%5Bview.more-by-curator%5D=15&omit%5Bresource%5D=autos&platform=web&views=featured-artists%2Cmore-by-curator"
+
+
+
+
+
+
+
+
+headers = {"user-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+            "Authorization": "Bearer eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IldlYlBsYXlLaWQifQ.eyJpc3MiOiJBTVBXZWJQbGF5IiwiaWF0IjoxNzYyNTM4NTI0LCJleHAiOjE3Njk3OTYxMjQsInJvb3RfaHR0cHNfb3JpZ2luIjpbImFwcGxlLmNvbSJdfQ.2fpk1NEdRGBhrWjhjDJfeVWQyfa005cJYQ0Ye37GeD08vuyZvVA1xOc0JiePTEa9FLHa1HZjLd3n5F0CYUqLTw",
+            "Media-User-Token": "AvxHFN2PzpRpIkzuoGPn9VeW7Hdx1Y5a8LLLsfVgOEiSBYJcUGycxXIjlw7eno8fDsWek35uL65oj+CZI9eY76CFQPx4QpkR31qMNGKjEHBYhhgfLdBlYQb4APuPFYJ45NJvSGT9A+jxFG+wQNYtQupM9JdrT4i64PV3XxKjwqhb+MFp1o9iy9BXVLTTDttyztXnZJbI6aV1s8hgURZWnT6FhdOtjzTkTRHiNcuO0CwT+VnvKw==",
+            "Referer": "https://music.apple.com/",
+            "Origin": "https://music.apple.com"}
+
+
+#st.markdown("In your playlist, click the three dots at the top of the screen. Click 'copy link' (share → copy, if on mobile). Paste that link below.")
+
+r = requests.get(url, headers=headers)
+r2 = requests.get(url2, headers=headers)
+```
+
+
+
+```{python}
+#testing if function works on different playlists
+boston_url = "https://music.apple.com/us/playlist/boston/pl.u-r2yBJJ4FPkKMbNm"
+
+def extract_id(playlist_url):
+    splits = playlist_url.split('/')
+    id = splits[-1]
+    return id
+
+
+id = extract_id(boston_url)
+
+base_url = f"https://amp-api.music.apple.com/v1/catalog/us/playlists/{id}"
+
+json_url = base_url + query
+boston_url = requests.get(json_url, headers=headers)
+```
+
+
+
+
+
+```{python}
+import json
+import re
+
+data = r2.json()
+#
+song_data = data['resources']['songs']
+
+songs_list = [song['attributes']['name'] for song in song_data.values()]
+songs_list = [re.sub(r"\(.+\)", '', s).strip() for s in songs_list]
+
+
+
+
+
+artist_list = [artist['attributes']['artistName'] for artist in song_data.values()]
+
+
+
+df = pd.DataFrame({
+    "song": songs_list, 
+    "artist": artist_list})
+df
+
+
+
+songs_dict = dict(zip(songs_list, artist_list))
+songs_dict
+```
+
+
+
+
+
+```{python}
+client_access_token = "_sYrfS9alifx52SESlKPx5_gIqlcwL-gIjRTzXqylKxLUh0oGz5Ekjrcd4yTvbvS"
+
+
+import lyricsgenius
+LyricsGenius = lyricsgenius.Genius(client_access_token, timeout=15, sleep_time=1, retries=3)
+
+song = LyricsGenius.search_song("Primetime", "JAY-Z")
+lyrics = song.lyrics
+lyrics
+```
+
+
+
+
+
+
+
+
+```{python}
+import time
+from tqdm import tqdm
+
+
+all_lyrics = []
+for song, artist in tqdm(songs_dict.items()):
+    artist_search = re.split('&|,', artist)
+    search = LyricsGenius.search_song(song, artist_search[0].strip())
+    if search is None:
+        print(f"No lyrics for {search}")
+        continue
+    lyrics = search.lyrics
+    all_lyrics.append({'lyrics': lyrics,
+                        'song': song,
+                        'artist': artist})
+    time.sleep(0.5)
+all_lyrics
+```
+
+
+
+
+
+
+```{python}
+from joblib import dump, load
+#dump(all_lyrics, 'all_lyrics.joblib')
+```
+
+
+```{python}
+lyrics_saved = load('all_lyrics.joblib')
+lyrics_saved
+```
+
+```{python}
+lyrics_df = pd.DataFrame(lyrics_saved)
+#lyrics_df = lyrics_df.rename(columns={0:'lyric'})
+lyrics_df
+
+```
+
+
+
+
+```{python}
+lyrics_df['lyrics'] = (
+    lyrics_df['lyrics'].str.replace(r'\n', ' ', regex=True) #removes new line symbol
+    .str.replace(r'([a-z])([A-Z])', '\\1 \\2', regex=True) #ensures spaces between words
+    .str.replace(r'\[.*?\]', ' ', regex=True) #removes brackets
+    .str.replace(r'^.*Lyrics ', '', regex=True) #removes everything before and including lyrics headers
+    .str.replace(r'\u2005', '', regex=True) #removes this pattern which sometimes appears within lyrics
+)
+lyrics_df
+```
+
+
+
+
+```{python}
+from tqdm import tqdm
+import textblob
+from textblob.sentiments import NaiveBayesAnalyzer
+import nltk
+
+classss = []
+pos = []
+neg = []
+
+for i in tqdm(lyrics_df['lyrics']):
+  statement = i
+  output = textblob.TextBlob(statement, analyzer=NaiveBayesAnalyzer()).sentiment
+
+  classss.append(output[0])
+  pos.append(output[1])
+  neg.append(output[2])
+
+
+blob_lyrics_df = lyrics_df.copy()
+
+blob_lyrics_df['classification'] = classss
+blob_lyrics_df['pos'] = pos
+blob_lyrics_df['neg'] = neg
+
+blob_lyrics_df
+```
+
+
+```{python}
+import plotly.express as px
+
+blob_songs_by_pos = blob_lyrics_df.sort_values(by='pos', ascending=False)
+
+
+
+
+blob_songs_by_neg = blob_lyrics_df.sort_values(by='neg', ascending=False)
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+```{python}
+from transformers import pipeline
+import torch
+
+
+trans_lyrics_df = lyrics_df.copy()
+
+trans_list = []
+
+sentiment_analysis = pipeline('sentiment-analysis', model='siebert/sentiment-roberta-large-english', 
+truncation=True, 
+max_length=512)
+
+for i in tqdm(trans_lyrics_df['lyrics']):
+  text = i
+  result = sentiment_analysis(text)
+  trans_list.append((result[0]['label'], result[0]['score']))
+
+
+trans_lyrics_df[['label', 'score']] = trans_list
+
+trans_lyrics_df
+```
+
+
+
+```{python}
+
+trans_songs_by_pos = trans_lyrics_df[trans_lyrics_df['label'] == 'POSITIVE'].sort_values(by='score', ascending=False)
+
+
+trans_songs_by_neg = trans_lyrics_df[trans_lyrics_df['label'] == 'NEGATIVE'].sort_values(by='score', ascending=False)
+
+
+```
+
+
+
+
+```{python}
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+
+vader = SentimentIntensityAnalyzer()
+
+vader_polars = []
+
+for i in tqdm(lyrics_df['lyrics']):
+  statement = i
+  vader_polars.append(vader.polarity_scores(statement).get('compound'))
+
+vader_songs_df = lyrics_df.copy()
+vader_songs_df['sentiment'] = vader_polars
+
+vader_songs_df
+```
+
+
+
+
+```{python}
+
+vader_songs_by_pos = vader_songs_df.sort_values(by='sentiment', ascending=False)
+
+
+
+
+vader_songs_by_neg = vader_songs_df.sort_values(by='sentiment')
+
+```
+
+
+
+
+
+
+
+
+
+```{python}
+classifier = pipeline("text-classification", model='bhadresh-savani/distilbert-base-uncased-emotion', return_all_scores=True, truncation=True, 
+max_length=512)
+
+
+
+emotions = []
+
+for pred in tqdm(lyrics_df['lyrics']):
+    prediction = classifier(str(pred))
+    top_emote = max(prediction[0], key=lambda x:x['score'])
+    emotions.append(top_emote)
+
+
+emote_df = lyrics_df.copy()
+emotions_scores = pd.DataFrame(emotions)
+emote_df[['emotion', 'score']] = emotions_scores[['label', 'score']]
+emote_df
+```
+
+
+
+
+
+```{python}
+from transformers import pipeline
+
+classifier = pipeline("text-classification", model="Veucci/lyrics-to-genre",
+truncation=True, 
+max_length=512)
+
+result = classifier(lyrics_df['lyrics'][8])
+
+print(result)
+
+
+genres = []
+
+for g in tqdm(lyrics_df['lyrics']):
+    prediction = classifier(str(g))
+    genres.append(prediction[0])
+
+
+genres_df = lyrics_df.copy()
+genres_scores = pd.DataFrame(genres)
+genres_df[['label', 'score']] = genres_scores
+genres_df
+
+```
+
+
+
+
+
+```{python}
+import plotly.express as px
+
+px.line(vader_songs_df,
+    x='song',
+    y='sentiment')
+```
+
+
+```{python}
+import plotly.express as px
+
+def convert_to_neg(df):
+  df['score'] = df['score'].where(df['label'] == 'POSITIVE', -df['score']) #if label is positive, keep as is, else reverse the sign
+  return df
+
+
+
+
+
+
+
+vader_sorted = vader_songs_df.sort_values(by='sentiment', ascending=False)
+
+vader_fig = px.line(vader_sorted,
+    x='song',
+    y='sentiment',
+    title='VADER Rankings')
+vader_fig.show()
+
+
+
+
+
+blob_sorted = blob_lyrics_df.sort_values(by='pos', ascending=False)
+
+blob_vid = px.line(blob_sorted,
+    x='song',
+    y='pos',
+    title='Blob Rankings')
+blob_vid.show()
+
+
+
+
+
+
+tsfdf = convert_to_neg(trans_lyrics_df)
+trans_sorted = tsfdf.sort_values(by='score', ascending=False)
+
+trans_fig = px.line(trans_sorted,
+    x='song',
+    y='score',
+    title='Transformer Rankings')
+trans_fig.show()
+```
+
+
+
+
+```{python}
+from top2vec import Top2Vec
+
+model = Top2Vec(lyrics_df['lyrics'].tolist(), speed='learn', workers=8)
+```
+
+
+```{python}
+topic_sizes, topic_nums = model.get_topic_sizes()
+
+for topic in topic_nums:
+    model.generate_topic_wordcloud(topic)
+```
