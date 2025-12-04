@@ -8,6 +8,7 @@ import re
 import time
 import lyricsgenius
 import plotly.express as px
+from bs4 import BeautifulSoup
 
 # ---------------------------
 # INITIAL SESSION STATE
@@ -69,9 +70,64 @@ def fetch_playlist(playlist_url: str):
     return df, dict(zip(songs, artists))
 
 
-def fetch_lyrics_for_songs(songs_dict: dict, token: str):
-    genius = lyricsgenius.Genius(token, timeout=15, sleep_time=1, retries=3)
+GENIUS_API_BASE = "https://api.genius.com/search"
 
+def clean_lyrics(text):
+    if not text:
+        return ""
+    text = re.sub(r"\[.*?\]", " ", text)        # remove [Verse 1], [Chorus], etc.
+    text = re.sub(r"\n+", " ", text)
+    text = re.sub(r"([a-z])([A-Z])", r"\1 \2", text)
+    text = text.replace("\u2005", "")
+    return text.strip()
+
+
+def genius_api_search(song, artist, token):
+    """Use Genius API to find the URL of a song."""
+    headers = {"Authorization": f"Bearer {token}"}
+    params = {"q": f"{song} {artist}"}
+
+    try:
+        r = requests.get(GENIUS_API_BASE, headers=headers, params=params, timeout=10)
+        r.raise_for_status()
+        hits = r.json()["response"]["hits"]
+        if not hits:
+            return None
+        return hits[0]["result"]["url"]
+    except Exception:
+        return None
+
+
+def scrape_genius_lyrics(url):
+    """Scrape the lyrics from Genius manually."""
+    if not url:
+        return ""
+
+    try:
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0 Safari/537.36"
+            )
+        }
+        r = requests.get(url, headers=headers, timeout=10)
+        r.raise_for_status()
+
+        soup = BeautifulSoup(r.text, "html.parser")
+        containers = soup.find_all("div", {"data-lyrics-container": "true"})
+        if not containers:
+            return ""
+
+        lyrics = " ".join(c.get_text(" ") for c in containers)
+        return clean_lyrics(lyrics)
+
+    except Exception:
+        return ""
+
+
+def fetch_lyrics_for_songs(songs_dict, genius_token):
+    """Pull lyrics using Genius API → then manual scraper."""
     results = []
     progress = st.progress(0)
     total = max(len(songs_dict), 1)
@@ -81,27 +137,30 @@ def fetch_lyrics_for_songs(songs_dict: dict, token: str):
 
         main_artist = re.split("&|,", artist)[0].strip()
 
-        try:
-            found = genius.search_song(song, main_artist)
-            lyrics = found.lyrics if found else ""
-        except Exception:
-            lyrics = ""
+        # Step 1 — Genius API (get song URL)
+        url = genius_api_search(song, main_artist, genius_token)
 
-        results.append({"song": song, "artist": artist, "lyrics": lyrics})
-        time.sleep(0.2)
+        # Step 2 — Scrape lyrics manually
+        lyrics = scrape_genius_lyrics(url)
+        lyrics = lyrics
 
-    df = pd.DataFrame(results)
+        results.append({
+            "song": song,
+            "artist": artist,
+            "lyrics": lyrics,
+        })
 
-    df["lyrics"] = (
-        df["lyrics"]
-        .str.replace(r"\n", " ", regex=True)
-        .str.replace(r"([a-z])([A-Z])", r"\1 \2", regex=True)
-        .str.replace(r"\[.*?\]", " ", regex=True)
-        .str.replace(r"^.*Lyrics ", "", regex=True)
-        .str.replace(r"\u2005", "", regex=True)
-    )
+        time.sleep(0.25)
 
+        df = pd.DataFrame(results)
+        
+        df['lyrics'] = df['lyrics'].str.replace(r'^.*? Lyrics', '', regex=True)
+    
     return df
+
+
+
+
 
 
 # ---------------------------
