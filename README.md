@@ -1,6 +1,8 @@
 ---
 title: "Song Scraping and Lyric Sentiment Analysis"
 format: gfm
+execute:
+    output: True
 ---
 
 
@@ -56,6 +58,8 @@ headers = {"user-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/
 
 r = requests.get(url, headers=headers)
 r2 = requests.get(url2, headers=headers)
+
+
 ```
 
 
