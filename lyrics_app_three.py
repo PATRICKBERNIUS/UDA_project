@@ -18,12 +18,12 @@ st.set_page_config(
 # CONFIGURATION
 # ============================================================
 
-GENIUS_TOKEN = "_sYrfS9alifx52SESlKPx5_gIqlcwL-gIjRTzXqylKxLUh0oGz5Ekjrcd4yTvbvS"
+GENIUS_TOKEN = st.secrets["GENIUS_TOKEN"]
 
 headers = {
     "user-Agent": "Mozilla/5.0",
-    "Authorization": "Bearer eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IldlYlBsYXlLaWQifQ.eyJpc3MiOiJBTVBXZWJQbGF5IiwiaWF0IjoxNzYyNTM4NTI0LCJleHAiOjE3Njk3OTYxMjQsInJvb3RfaHR0cHNfb3JpZ2luIjpbImFwcGxlLmNvbSJdfQ.2fpk1NEdRGBhrWjhjDJfeVWQyfa005cJYQ0Ye37GeD08vuyZvVA1xOc0JiePTEa9FLHa1HZjLd3n5F0CYUqLTw",
-    "Media-User-Token": "AvxHFN2PzpRpIkzuoGPn9VeW7Hdx1Y5a8LLLsfVgOEiSBYJcUGycxXIjlw7eno8fDsWek35uL65oj+CZI9eY76CFQPx4QpkR31qMNGKjEHBYhhgfLdBlYQb4APuPFYJ45NJvSGT9A+jxFG+wQNYtQupM9JdrT4i64PV3XxKjwqhb+MFp1o9iy9BXVLTTDttyztXnZJbI6aV1s8hgURZWnT6FhdOtjzTkTRHiNcuO0CwT+VnvKw==",
+    "Authorization": st.secrets["Authorization"],
+    "Media-User-Token": st.secrets["Media_User_Token"],
     "Referer": "https://music.apple.com/",
     "Origin": "https://music.apple.com"
 }
