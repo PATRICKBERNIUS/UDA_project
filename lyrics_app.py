@@ -239,7 +239,7 @@ def main():
 
     playlist_url = st.text_input(
         "Apple Music Playlist URL:",
-        value="https://music.apple.com/us/playlist/boston/pl.u-r2yBJJ4FPkKMbNm",
+        value="https://music.apple.com/us/playlist/boston/pl.u-r2yBJJ4FPkKMbNm")
     # Load songs + lyrics
     if st.button("Load Playlist & Lyrics"):
         try:
