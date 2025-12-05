@@ -77,6 +77,17 @@ def fetch_lyrics_for_songs(songs_dict: dict, token: str):
     total = max(len(songs_dict), 1)
     error_count = 0
 
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Accept-Encoding': 'gzip, deflate',
+        'DNT': '1',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1'
+    }
+
+
     for i, (song, artist) in enumerate(songs_dict.items(), start=1):
         progress.progress(i / total)
 
@@ -244,7 +255,7 @@ def main():
 
     if st.session_state.df_lyrics is not None:
         st.write("### Lyrics Loaded")
-        st.dataframe(st.session_state.df_lyrics, use_container_width=True)
+        st.dataframe(st.session_state.df_lyrics, width=True)
 
     # ---------------------------
     # SENTIMENT ANALYSIS
@@ -279,7 +290,7 @@ def main():
         model_used = st.session_state.last_model
 
         st.write(f"### {model_used} Output")
-        st.dataframe(df_sent, use_container_width=True)
+        st.dataframe(df_sent, width=True)
 
         if model_used == "TextBlob (NaiveBayes)":
             fig = plot_blob(df_sent)
@@ -288,7 +299,7 @@ def main():
         else:
             fig = plot_transformer(df_sent)
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width=True)
 
         # Sentiment CSV download
         st.download_button(
