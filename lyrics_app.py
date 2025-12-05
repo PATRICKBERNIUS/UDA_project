@@ -251,9 +251,7 @@ def main():
                 df_lyrics = fetch_lyrics_for_songs(song_map)
                 st.session_state.df_lyrics = df_lyrics
 
-            st.success("Playlist processing complete!")s
-
-            st.success("Lyrics loaded successfully!")
+            st.success("Playlist processing complete!")
 
         except Exception as e:
             st.error(f"Error loading playlist: {e}")
