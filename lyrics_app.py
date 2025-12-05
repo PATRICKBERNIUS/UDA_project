@@ -6,6 +6,7 @@ import requests
 import pandas as pd
 import re
 import time
+import lyricsgenius
 import plotly.express as px
 
 # ---------------------------
@@ -68,54 +69,28 @@ def fetch_playlist(playlist_url: str):
     return df, dict(zip(songs, artists))
 
 
-def fetch_lyrics_for_songs(songs_dict: dict, token: str = None):
-    """
-    Fetch lyrics using lyrics.ovh API (free, no auth required, deployment-friendly)
-    Falls back to empty string if lyrics not found
-    """
+def fetch_lyrics_for_songs(songs_dict: dict, token: str):
+    genius = lyricsgenius.Genius(token, timeout=15, sleep_time=1, retries=3)
+
     results = []
     progress = st.progress(0)
     total = max(len(songs_dict), 1)
-    error_count = 0
-    success_count = 0
 
     for i, (song, artist) in enumerate(songs_dict.items(), start=1):
         progress.progress(i / total)
 
         main_artist = re.split("&|,", artist)[0].strip()
-        
-        # Clean song name (remove parentheticals, features, etc.)
-        clean_song = re.sub(r'\(.*?\)|\[.*?\]', '', song).strip()
 
         try:
-            # Use lyrics.ovh API - free and works in deployment
-            url = f"https://api.lyrics.ovh/v1/{main_artist}/{clean_song}"
-            response = requests.get(url, timeout=10)
-            
-            if response.status_code == 200:
-                data = response.json()
-                lyrics = data.get("lyrics", "")
-                if lyrics:
-                    success_count += 1
-            else:
-                lyrics = ""
-                error_count += 1
-                
-        except Exception as e:
+            found = genius.search_song(song, main_artist)
+            lyrics = found.lyrics if found else ""
+        except Exception:
             lyrics = ""
-            error_count += 1
-            if error_count == 1:  # Show first error
-                st.warning(f"⚠️ Some lyrics may not be available: {str(e)}")
 
         results.append({"song": song, "artist": artist, "lyrics": lyrics})
-        time.sleep(0.3)  # Be respectful to the API
+        time.sleep(0.2)
 
     df = pd.DataFrame(results)
-    
-    st.info(f"✅ Successfully fetched lyrics for {success_count}/{total} songs")
-    
-    if error_count > 0:
-        st.warning(f"⚠️ Could not find lyrics for {error_count}/{total} songs")
 
     df["lyrics"] = (
         df["lyrics"]
@@ -239,7 +214,11 @@ def main():
 
     playlist_url = st.text_input(
         "Apple Music Playlist URL:",
-        value="https://music.apple.com/us/playlist/boston/pl.u-r2yBJJ4FPkKMbNm")
+        value="https://music.apple.com/us/playlist/boston/pl.u-r2yBJJ4FPkKMbNm",
+    )
+
+    genius_token = "_sYrfS9alifx52SESlKPx5_gIqlcwL-gIjRTzXqylKxLUh0oGz5Ekjrcd4yTvbvS"
+
     # Load songs + lyrics
     if st.button("Load Playlist & Lyrics"):
         try:
@@ -247,11 +226,11 @@ def main():
                 df_songs, song_map = fetch_playlist(playlist_url)
                 st.session_state.df_songs = df_songs
 
-            with st.spinner("Fetching lyrics from lyrics.ovh (this may take a bit)..."):
-                df_lyrics = fetch_lyrics_for_songs(song_map)
+            with st.spinner("Fetching lyrics (this may take a bit)..."):
+                df_lyrics = fetch_lyrics_for_songs(song_map, genius_token)
                 st.session_state.df_lyrics = df_lyrics
 
-            st.success("Playlist processing complete!")
+            st.success("Lyrics loaded successfully!")
 
         except Exception as e:
             st.error(f"Error loading playlist: {e}")
