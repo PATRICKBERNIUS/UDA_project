@@ -75,6 +75,7 @@ def fetch_lyrics_for_songs(songs_dict: dict, token: str):
     results = []
     progress = st.progress(0)
     total = max(len(songs_dict), 1)
+    error_count = 0
 
     for i, (song, artist) in enumerate(songs_dict.items(), start=1):
         progress.progress(i / total)
@@ -84,13 +85,19 @@ def fetch_lyrics_for_songs(songs_dict: dict, token: str):
         try:
             found = genius.search_song(song, main_artist)
             lyrics = found.lyrics if found else ""
-        except Exception:
+        except Exception as e:
             lyrics = ""
+            error_count += 1
+            if error_count == 1:  # Show first error
+                st.warning(f"Error fetching lyrics: {str(e)}")
 
         results.append({"song": song, "artist": artist, "lyrics": lyrics})
         time.sleep(0.2)
 
     df = pd.DataFrame(results)
+    
+    if error_count > 0:
+        st.warning(f"⚠️ Failed to fetch lyrics for {error_count}/{total} songs. Check your Genius API token.")
 
     df["lyrics"] = (
         df["lyrics"]
