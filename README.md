@@ -1,665 +1,185 @@
 ---
-title: "Song Scraping and Lyric Sentiment Analysis"
+title: "Demonstrating Quarto for GitHub READMEs"
 format: gfm
+execute: 
+  warning: false
+  message: false
+  errors: false
 jupyter: python3
 ---
 
+## Section Header
 
+You'll want to make use of sections and subsections to organize your document. Think of the sections as broad categories, and subsections as more specific topics within those categories. I can make bigger statements at this level.
 
-This project attempted to scrape song data from public apple music playlists, perform sentiment analysis using several different methods, and reorder said playlist from happiest to saddest, plotting the results and providing a dataframe of the songs in their new order. Uses Genius's API to extract lyrics.
+### Subsection Header
 
+Subsections are useful for breaking ideas down and adding details. This is also likely where you'll want to add code blocks. 
+
+It will be worth noting some chunk options that you might find useful.
+
+If I want to hide code but show output, I can use `echo: false`.
 
 ```{python}
+#| echo: false
+2 + 2
+```
+
+If I want to hide output but show code, I can use `results: 'hide'`.
+
+```{python}
+#| results: 'hide'
+2 + 2
+```
+
+Maybe I want to show the code, but not run it. I can use `eval: false`.
+
+```{python}
+#| eval: false
+2 + 2
+```
+
+In most of your chunks, you'll probably want to turn off messages and warnings. You might notice, though, that I did that globally in the execute key in the header above. But if you want to do it in a specific chunk, you can use:
+
+```{python}
+#| messages: false
+#| warnings: false
+```
+
+## Loading Data and Models
+
+If your project relies on heavy computations (either for the data prep or modeling), you'll probably want to show your work in a code chunk that does not evaluate. 
+
+```{python}
+#| eval: false
+#| echo: true
+
+'''
+Imagine that this is a long code block that reads data
+and then starts your wrangling tasks. If it takes 
+over a minute to run, you'll probably want to have
+that work saved in a script and write your data out
+to a file.
+'''
+
+```
+
+You can quietly load in your prepped data in another chunk.
+
+```{python}
+#| echo: false
 import pandas as pd
-from bs4 import BeautifulSoup
-import requests
-
-
-url = "https://music.apple.com/us/playlist/best-of-the-best/pl.u-XkD0YzMfDYd17j9"
-
-
-#test url
-boston_url = "https://music.apple.com/us/playlist/boston/pl.u-r2yBJJ4FPkKMbNm"
-
-
-#function to extract the id from the url
-def extract_id(playlist_url): 
-    splits = playlist_url.split('/') #splitting on /
-    id = splits[-1] #taking last group
-    return id
-
-
-#json request header
-url2 = "https://amp-api.music.apple.com/v1/catalog/us/playlists/pl.u-XkD0YzMfDYd17j9?art%5Burl%5D=f&extend=editorialArtwork%2CeditorialVideo%2Coffers%2CseoDescription%2CseoTitle%2CtrackCount&fields%5Balbums%5D=name%2Cartwork%2CplayParams%2Curl&fields%5Bapple-curators%5D=name%2Curl&fields%5Bartists%5D=name%2Cartwork%2Curl&fields%5Bcurators%5D=name%2Curl&fields%5Bsongs%5D=name%2CartistName%2CcuratorName%2CcomposerName%2Cartwork%2CplayParams%2CcontentRating%2CalbumName%2Curl%2CdurationInMillis%2CaudioTraits%2CextendedAssetUrls&format%5Bresources%5D=map&include=tracks%2Ccurator&include%5Bmusic-videos%5D=artists&include%5Bsongs%5D=artists&l=en-US&limit%5Btracks%5D=300&limit%5Bview.featured-artists%5D=15&limit%5Bview.more-by-curator%5D=15&omit%5Bresource%5D=autos&platform=web&views=featured-artists%2Cmore-by-curator"
-
-
-#public url
-base_url = f"https://amp-api.music.apple.com/v1/catalog/us/playlists/{id}"
-
-#ending for request 
-query = "?art%5Burl%5D=f&extend=editorialArtwork%2CeditorialVideo%2Coffers%2CseoDescription%2CseoTitle%2CtrackCount&fields%5Balbums%5D=name%2Cartwork%2CplayParams%2Curl&fields%5Bapple-curators%5D=name%2Curl&fields%5Bartists%5D=name%2Cartwork%2Curl&fields%5Bcurators%5D=name%2Curl&fields%5Bsongs%5D=name%2CartistName%2CcuratorName%2CcomposerName%2Cartwork%2CplayParams%2CcontentRating%2CalbumName%2Curl%2CdurationInMillis%2CaudioTraits%2CextendedAssetUrls&format%5Bresources%5D=map&include=tracks%2Ccurator&include%5Bmusic-videos%5D=artists&include%5Bsongs%5D=artists&l=en-US&limit%5Btracks%5D=300&limit%5Bview.featured-artists%5D=15&limit%5Bview.more-by-curator%5D=15&omit%5Bresource%5D=autos&platform=web&views=featured-artists%2Cmore-by-curator"
-
-
-
-
-
-
-
-
-headers = {"user-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
-            "Authorization": "Bearer eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IldlYlBsYXlLaWQifQ.eyJpc3MiOiJBTVBXZWJQbGF5IiwiaWF0IjoxNzYyNTM4NTI0LCJleHAiOjE3Njk3OTYxMjQsInJvb3RfaHR0cHNfb3JpZ2luIjpbImFwcGxlLmNvbSJdfQ.2fpk1NEdRGBhrWjhjDJfeVWQyfa005cJYQ0Ye37GeD08vuyZvVA1xOc0JiePTEa9FLHa1HZjLd3n5F0CYUqLTw",
-            "Media-User-Token": "AvxHFN2PzpRpIkzuoGPn9VeW7Hdx1Y5a8LLLsfVgOEiSBYJcUGycxXIjlw7eno8fDsWek35uL65oj+CZI9eY76CFQPx4QpkR31qMNGKjEHBYhhgfLdBlYQb4APuPFYJ45NJvSGT9A+jxFG+wQNYtQupM9JdrT4i64PV3XxKjwqhb+MFp1o9iy9BXVLTTDttyztXnZJbI6aV1s8hgURZWnT6FhdOtjzTkTRHiNcuO0CwT+VnvKw==",
-            "Referer": "https://music.apple.com/",
-            "Origin": "https://music.apple.com"}
-
-
-#st.markdown("In your playlist, click the three dots at the top of the screen. Click 'copy link' (share → copy, if on mobile). Paste that link below.")
-
-r = requests.get(url, headers=headers)
-r2 = requests.get(url2, headers=headers)
-
-
+#data = pd.read_csv('path/to/your/prepped_data.csv')
 ```
 
+The same holds true for models, especially if you're fitting complex models that take 
 
+## Rendering Outputs
+
+When I render this document, the output will be ready to appear as the `readme` on my GitHub repository. Let's see how that might look with some plots and tables.
+
+Notice below that I'm not going to print my code, I just want it to run.
+```{python}
+#| echo: false
+#| messages: false
+#| warnings: false
+
+import matplotlib.pyplot as plt
+import numpy as np 
+import pandas as pd
+import seaborn as sns
+```
+
+Let's see what a simple plot looks like.
 
 ```{python}
-#testing if function works on different playlists
-boston_url = "https://music.apple.com/us/playlist/boston/pl.u-r2yBJJ4FPkKMbNm"
+#| messages: false
+#| warnings: false
 
-def extract_id(playlist_url):
-    splits = playlist_url.split('/')
-    id = splits[-1]
-    return id
+data = {
+    'x': np.linspace(0, 10, 100),
+    'y': np.sin(np.linspace(0, 10, 100))
+}
 
+df = pd.DataFrame(data)
 
-id = extract_id(boston_url)
-
-base_url = f"https://amp-api.music.apple.com/v1/catalog/us/playlists/{id}"
-
-json_url = base_url + query
-boston_url = requests.get(json_url, headers=headers)
+sns.lineplot(data=df, x='x', y='y')
+plt.title('Sine Wave')
+plt.xlabel('X-axis')
+plt.ylabel('Y-axis')
+plt.show()
 ```
 
+This is where I am going to offer some explanations about the sine wave above. 
 
-
-
+Now let's see what a table looks like.
 
 ```{python}
-import json
-import re
-
-#parsing json
-data = r2.json()
-
-#song data is nested here
-song_data = data['resources']['songs']
-
-#extracts all the names of the songs
-songs_list = [song['attributes']['name'] for song in song_data.values()]
-#removes parentheses and strops spaces
-songs_list = [re.sub(r"\(.+\)", '', s).strip() for s in songs_list]
-
-
-#extracting artist names
-artist_list = [artist['attributes']['artistName'] for artist in song_data.values()]
-
-
-#creating dataframe
-df = pd.DataFrame({
-    "song": songs_list, 
-    "artist": artist_list})
-
-
-#creating dictionary for searching
-songs_dict = dict(zip(songs_list, artist_list))
-songs_dict
+#| echo: true
+#| messages: false
+#| warnings: false
+#| results: 'markdown'
+data_table = {
+    'A': [1, 2, 3, 4, 5],
+    'B': ['a', 'b', 'c', 'd', 'e'],
+    'C': [10.5, 20.3, 30.2, 40.1, 50.0]
+}
+df_table = pd.DataFrame(data_table)
+df_table.head().to_markdown()
 ```
 
+Notice the use of `to_markdown()` to render the table nicely in GitHub's markdown format. It is a small thing that will make a big in difference in how your document looks!
 
-
-
+Now, let's see what some linear model output looks like.
 
 ```{python}
-#genius API key
-client_access_token = "_sYrfS9alifx52SESlKPx5_gIqlcwL-gIjRTzXqylKxLUh0oGz5Ekjrcd4yTvbvS"
-
-
-import lyricsgenius
-LyricsGenius = lyricsgenius.Genius(client_access_token, timeout=15, sleep_time=1, retries=3)
-
-#test
-song = LyricsGenius.search_song("Primetime", "JAY-Z")
-lyrics = song.lyrics
-lyrics
+#| echo: true
+#| messages: false
+#| warnings: false
+import statsmodels.api as sm    
+X = df[['x']]
+y = df['y']
+X = sm.add_constant(X) 
+model = sm.OLS(y, X).fit()
+summary_table = model.summary().tables[1] 
+print(summary_table)
 ```
 
+Notice how I indexed into the summary table object to just get the coefficients table?
 
+You migth want to talk about your coefficients and there are two ways that you can do that:
 
+1. Manually type out your interpretations below the table.
+2. Use code to extract the coefficients and generate text automatically.
 
-
-
-
+Option number 1, while more straightforward, is not the choice. Option number 2 is more dynamic and reproducible, especially if you plan to update your model or data in the future.
 
 ```{python}
-import time
-from tqdm import tqdm
-
-
-all_lyrics = []
-for song, artist in tqdm(songs_dict.items()): #for each song and artist
-    artist_search = re.split('&|,', artist) #if multiple artists, take the first
-    search = LyricsGenius.search_song(song, artist_search[0].strip()) #search through genius
-    if search is None:
-        print(f"No lyrics for {search}")
-        continue #continue if no lyrics found
-    lyrics = search.lyrics
-    all_lyrics.append({'lyrics': lyrics,
-                        'song': song,
-                        'artist': artist}) 
-    time.sleep(0.5)
-all_lyrics
+#| echo: true
+#| messages: false
+#| warnings: false
+params = model.params
+intercept = params['const']
+slope = params['x'] 
 ```
 
+Now that those are out, I can use inline chunks to reference them in my text. You can think of inline chunks a lot like f-strings.
 
+The intercept of the model is `{python} str(intercept.round(3))` and the slope is `{python} str(slope.round(3))`. No matter what I do with my data or model, these values will always be up to date in my text!
 
+I can also pull out model fit statistics like *R*-squared. The *R*-squared for this model is `{python} str(model.rsquared.round(3))`.
 
+You have the full power of markdown and Python at your disposal. I just want to show you some handy markdown things that you might want to use. 
 
+I can create **bold** text or *italicized* text.
 
-```{python}
-from joblib import dump, load
-#dump(all_lyrics, 'all_lyrics.joblib')
-```
+Functions and variables can be represented in `monospace`. Note that those are backticks, not apostrophes.
 
+You can create bullet point lists:
 
-```{python}
-lyrics_saved = load('all_lyrics.joblib')
-lyrics_saved
-```
+- Item 1
+- Item 2
+  - Subitem 2a
+  - Subitem 2b
 
-```{python}
-lyrics_df = pd.DataFrame(lyrics_saved)
-lyrics_df
-
-```
-
-
-
-
-```{python}
-#cleaning lyrics 
-
-lyrics_df['lyrics'] = (
-    lyrics_df['lyrics'].str.replace(r'\n', ' ', regex=True) #removes new line symbol
-    .str.replace(r'([a-z])([A-Z])', '\\1 \\2', regex=True) #ensures spaces between words
-    .str.replace(r'\[.*?\]', ' ', regex=True) #removes brackets
-    .str.replace(r'^.*Lyrics ', '', regex=True) #removes everything before and including lyrics headers
-    .str.replace(r'\u2005', '', regex=True) #removes this pattern which sometimes appears within lyrics
-)
-lyrics_df
-```
-
-
-Trying different sentiment analysis methods:
-
-
-
-```{python}
-#textblob method
-from tqdm import tqdm
-import textblob
-from textblob.sentiments import NaiveBayesAnalyzer
-import nltk
-
-classss = [] 
-pos = []
-neg = []
-
-for i in tqdm(lyrics_df['lyrics']): #loop through lyrics
-  output = textblob.TextBlob(i, analyzer=NaiveBayesAnalyzer()).sentiment
-
-  classss.append(output[0])
-  pos.append(output[1])
-  neg.append(output[2])
-
-
-blob_lyrics_df = lyrics_df.copy()
-
-blob_lyrics_df['classification'] = classss
-blob_lyrics_df['pos'] = pos
-blob_lyrics_df['neg'] = neg
-
-blob_lyrics_df
-```
-
-
-
-
-
-
-
-
-```{python}
-#transformers method
-from tqdm import tqdm
-from transformers import pipeline
-import torch
-
-
-trans_lyrics_df = lyrics_df.copy()
-
-trans_list = []
-
-sentiment_analysis = pipeline('sentiment-analysis', model='siebert/sentiment-roberta-large-english', 
-truncation=True, 
-max_length=512)
-
-for i in tqdm(trans_lyrics_df['lyrics']):
-  text = i
-  result = sentiment_analysis(text)
-  trans_list.append((result[0]['label'], result[0]['score']))
-
-
-trans_lyrics_df[['label', 'score']] = trans_list
-
-trans_lyrics_df
-```
-
-
-
-
-
-
-```{python}
-#VADER method
-
-from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-
-vader = SentimentIntensityAnalyzer()
-
-vader_polars = []
-
-for i in tqdm(lyrics_df['lyrics']):
-  statement = i
-  vader_polars.append(vader.polarity_scores(statement).get('compound'))
-
-vader_songs_df = lyrics_df.copy()
-vader_songs_df['sentiment'] = vader_polars
-
-vader_songs_df
-```
-
-
-
-
-
-
-
-
-```{python}
-#detecting emotion from lyrics
-
-
-classifier = pipeline("text-classification", model='bhadresh-savani/distilbert-base-uncased-emotion', return_all_scores=True, truncation=True, 
-max_length=512)
-
-
-
-emotions = []
-
-for pred in tqdm(lyrics_df['lyrics']):
-    prediction = classifier(str(pred))
-    top_emote = max(prediction[0], key=lambda x:x['score']) #taking the most confident emotion
-    emotions.append(top_emote)
-
-
-emote_df = lyrics_df.copy()
-emotions_scores = pd.DataFrame(emotions)
-emote_df[['emotion', 'score']] = emotions_scores[['label', 'score']]
-emote_df
-```
-
-
-
-
-
-```{python}
-#detecting genre from lyrics
-
-from transformers import pipeline
-
-classifier = pipeline("text-classification", model="Veucci/lyrics-to-genre",
-truncation=True, 
-max_length=512)
-
-result = classifier(lyrics_df['lyrics'][8])
-
-print(result)
-
-
-genres = []
-
-for g in tqdm(lyrics_df['lyrics']):
-    prediction = classifier(str(g))
-    genres.append(prediction[0])
-
-
-genres_df = lyrics_df.copy()
-genres_scores = pd.DataFrame(genres)
-genres_df[['label', 'score']] = genres_scores
-genres_df
-
-```
-
-
-
-Reordering and plotting playlist from happiest to saddest
-
-```{python}
-import plotly.express as px
-
-#for model outputs that are all on a positive scale, flips the sign to represent negative sentiment
-def convert_to_neg(df):
-  df['score'] = df['score'].where(df['label'] == 'POSITIVE', -df['score']) #if label is positive, keep as is, else reverse the sign
-  return df
-
-
-
-
-#ranking songs by VADER sentiment
-vader_sorted = vader_songs_df.sort_values(by='sentiment', ascending=False)
-
-#plotting songs from most to least positive
-vader_fig = px.line(vader_sorted,
-    x='song',
-    y='sentiment',
-    title='VADER Rankings')
-vader_fig.show()
-
-
-
-
-#sorting textblob sentiment
-blob_sorted = blob_lyrics_df.sort_values(by='pos', ascending=False)
-
-#plotting songs from most to least positive
-blob_vid = px.line(blob_sorted,
-    x='song',
-    y='pos',
-    title='Blob Rankings')
-blob_vid.show()
-
-
-
-
-
-#converting negative sentiment values to negative
-tsfdf = convert_to_neg(trans_lyrics_df)
-
-#sorting transformer sentiment output
-trans_sorted = tsfdf.sort_values(by='score', ascending=False)
-
-#plotting songs from most to least positive
-trans_fig = px.line(trans_sorted,
-    x='song',
-    y='score',
-    title='Transformer Rankings')
-trans_fig.show()
-```
-
-
-
-
-Creating functions and pipeline for different playlists:
-
-```{python}
-from tqdm import tqdm
-
-#this function takes in a public apple music playlist link and extracts the song name and artist
-
-def get_playlist_data(playlist_url):
-
-    playlist_id = extract_id(playlist_url=playlist_url)
-
-    #public url
-    base_url = f"https://amp-api.music.apple.com/v1/catalog/us/playlists/{playlist_id}"
-
-    #ending for request 
-    query = "?art%5Burl%5D=f&extend=editorialArtwork%2CeditorialVideo%2Coffers%2CseoDescription%2CseoTitle%2CtrackCount&fields%5Balbums%5D=name%2Cartwork%2CplayParams%2Curl&fields%5Bapple-curators%5D=name%2Curl&fields%5Bartists%5D=name%2Cartwork%2Curl&fields%5Bcurators%5D=name%2Curl&fields%5Bsongs%5D=name%2CartistName%2CcuratorName%2CcomposerName%2Cartwork%2CplayParams%2CcontentRating%2CalbumName%2Curl%2CdurationInMillis%2CaudioTraits%2CextendedAssetUrls&format%5Bresources%5D=map&include=tracks%2Ccurator&include%5Bmusic-videos%5D=artists&include%5Bsongs%5D=artists&l=en-US&limit%5Btracks%5D=300&limit%5Bview.featured-artists%5D=15&limit%5Bview.more-by-curator%5D=15&omit%5Bresource%5D=autos&platform=web&views=featured-artists%2Cmore-by-curator"
-
-
-    full_url = base_url + query
-    
-    r = requests.get(full_url, headers=headers)
-
-    data = r.json()
-#
-    song_data = data['resources']['songs']
-
-    songs_list = [song['attributes']['name'] for song in song_data.values()]
-    songs_list = [re.sub(r"\(.+\)", '', s).strip() for s in songs_list]
-
-    artist_list = [artist['attributes']['artistName'] for artist in song_data.values()]
-
-    df = pd.DataFrame({
-    "song": songs_list, 
-    "artist": artist_list})
-
-    return df
-
-
-
-#this function gets the lyrics for each song
-
-def get_lyrics(df):
-
-    songs_dict = dict(zip(df['song'], df['artist']))
-
-    client_access_token = "_sYrfS9alifx52SESlKPx5_gIqlcwL-gIjRTzXqylKxLUh0oGz5Ekjrcd4yTvbvS"
-
-    import lyricsgenius
-    LyricsGenius = lyricsgenius.Genius(client_access_token, timeout=15, sleep_time=1, retries=3)
-
-    import time
-    all_lyrics = []
-    for song, artist in tqdm(songs_dict.items()):
-        artist_search = re.split('&|,', artist)
-        search = LyricsGenius.search_song(song, artist_search[0].strip())
-        if search is None:
-            print(f"No lyrics for {search}")
-            continue
-        lyrics = search.lyrics
-        all_lyrics.append({'lyrics': lyrics,
-                            'song': song,
-                            'artist': artist})
-        time.sleep(0.5)
-
-    lyrics_df = pd.DataFrame(all_lyrics)
-
-
-    lyrics_df['lyrics'] = (
-    lyrics_df['lyrics'].str.replace(r'\n', ' ', regex=True) #removes new line symbol
-    .str.replace(r'([a-z])([A-Z])', '\\1 \\2', regex=True) #ensures spaces between words
-    .str.replace(r'\[.*?\]', ' ', regex=True) #removes brackets
-    .str.replace(r'^.*Lyrics ', '', regex=True) #removes everything before and including lyrics headers
-    .str.replace(r'\u2005', '', regex=True) #removes this pattern which sometimes appears within lyrics
-)
-
-    return lyrics_df
-
-
-```
-
-
-
-```{python}
-#vader function
-def vader_sentiment(df):
-    from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-
-    vader = SentimentIntensityAnalyzer()
-
-    vader_polars = []
-
-    for i in tqdm(df['lyrics']):
-        vader_polars.append(vader.polarity_scores(i).get('compound'))
-
-    vader_songs_df = df.copy()
-    vader_songs_df['sentiment'] = vader_polars
-
-    return vader_songs_df
-
-
-#textblob function
-def texblob_sentiment(df):
-
-    import textblob
-    from textblob.sentiments import NaiveBayesAnalyzer
-    import nltk
-
-    classss = [] 
-    pos = []
-    neg = []
-
-    for i in tqdm(df['lyrics']): #loop through lyrics
-        output = textblob.TextBlob(i, analyzer=NaiveBayesAnalyzer()).sentiment
-
-        classss.append(output[0])
-        pos.append(output[1])
-        neg.append(output[2])
-
-
-    blob_lyrics_df = df.copy()
-
-    blob_lyrics_df['classification'] = classss
-    blob_lyrics_df['pos'] = pos
-    blob_lyrics_df['neg'] = neg
-
-    return blob_lyrics_df
-
-
-#transformer function
-def transformer_sentiment(df):
-    from transformers import pipeline
-    import torch
-
-
-    trans_list = []
-
-    sentiment_analysis = pipeline('sentiment-analysis', model='siebert/sentiment-roberta-large-english', 
-    truncation=True, 
-    max_length=512)
-
-    for i in tqdm(df['lyrics']):
-        result = sentiment_analysis(i)
-        trans_list.append((result[0]['label'], result[0]['score']))
-
-    trans_lyrics_df = df.copy()
-
-    trans_lyrics_df[['label', 'score']] = trans_list
-
-    return trans_lyrics_df
-```
-
-
-
-```{python}
-#based on model choice, performs sentiment analysis on lyrics
-def analyze_sentiment(lyrics_df, model='vader'):
-
-    if model.lower() == 'vader':
-        return vader_sentiment(lyrics_df)
-    if model.lower() == 'textblob':
-        return texblob_sentiment(lyrics_df)
-    if model.lower() == 'transformer':
-        return transformer_sentiment(lyrics_df)
-    else:
-        print("Model must be 'vader', 'textblob', or 'transformer'.")
-```
-
-
-
-```{python}
-
-#reorders and plots playlist from happiest to saddest
-def rank_and_plot(df, model):
-
-    import plotly.express as px
-
-
-    if model.lower() == 'vader':
-        vader_sorted = df.sort_values(by='sentiment', ascending=False)
-
-    #plotting songs from most to least positive
-        vader_fig = px.line(vader_sorted,
-        x='song',
-        y='sentiment',
-        title='VADER Rankings')
-        return vader_fig, vader_sorted
-
-    elif model.lower() == 'textblob':
-        blob_sorted = df.sort_values(by='pos', ascending=False)
-
-        #plotting songs from most to least positive
-        blob_fig = px.line(blob_sorted,
-            x='song',
-            y='pos',
-            title='Blob Rankings')
-        return blob_fig, blob_sorted
-
-    else:
-        tsfdf = convert_to_neg(df)
-
-        #sorting transformer sentiment output
-        trans_sorted = tsfdf.sort_values(by='score', ascending=False)
-
-        #plotting songs from most to least positive
-        trans_fig = px.line(trans_sorted,
-            x='song',
-            y='score',
-            title='Transformer Rankings')
-        return trans_fig, trans_sorted
-```
-
-
-
-```{python}
-#full pipeline
-def analyze_playlist(playlist_url, model='vader'):
-
-    #converts to negative signs if needed
-    def convert_to_neg(df):
-        df['score'] = df['score'].where(df['label'] == 'POSITIVE', -df['score']) #if label is positive, keep as is, else reverse the sign
-        return df
-
-    #for extracting id from playlist url
-    def extract_id(playlist_url): 
-        splits = playlist_url.split('/') #splitting on /
-        id = splits[-1] #taking last group
-        return id
-    
-    songs_df = get_playlist_data(playlist_url) #finds song data
-    lyrics_df = get_lyrics(songs_df) #gets lyrics
-    analyzed_df = analyze_sentiment(lyrics_df, model) #sentiment analysis 
-    fig, sorted_df = rank_and_plot(analyzed_df, model) #ranking and plotting
-    return fig, sorted_df
-
-
-```
-
-
-
-```{python}
-test_url = "https://music.apple.com/us/playlist/best-of-the-best/pl.u-XkD0YzMfDYd17j9"
-
-fig, sorted_df = analyze_playlist(test_url, model='textblob')
-fig.show()
-display(sorted_df)
-```
-
-
-```{python}
-fig
-sorted_df
-
-```
+You might want to include links within your document. You can use html links like this: <a href="https://www.example.com">Example</a> or markdown links like this: [Example](https://www.example.com).
