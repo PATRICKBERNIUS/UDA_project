@@ -1,8 +1,11 @@
 streamlit
-requests
 pandas
+requests
+lyricsgenius
 plotly
+vaderSentiment
 textblob
 transformers
-vaderSentiment
-beautifulsoup4
+torch
+tqdm
+
