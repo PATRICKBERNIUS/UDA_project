@@ -6,6 +6,7 @@ This project attempted to scrape song data from public apple music playlists, pe
 
 
 Inlcudes: 
+
     - Original qmd where most of the work and expirimentation was done
     - lyrics_app.py - code for streamlit app created by Claude AI. Does not work publicly due to Genius API blocking
     - Working pipeline script that executes scraping, sentiment analysis, and reorganization on given Apple Music playlist link.
