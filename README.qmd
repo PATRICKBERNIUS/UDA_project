@@ -1,6 +1,12 @@
 ---
 title: "Song Scraping and Lyric Sentiment Analysis"
 format: gfm
+execute:
+  enabled: true
+  freeze: auto
+  echo: false
+  warning: false
+  message: false
 jupyter: python3
 ---
 
@@ -86,6 +92,10 @@ boston_url = requests.get(json_url, headers=headers)
 
 
 ```{python}
+#| echo: true
+#| results: true
+#| fig-show: true
+
 import json
 import re
 
@@ -173,12 +183,16 @@ from joblib import dump, load
 
 
 ```{python}
-lyrics_saved = load('all_lyrics.joblib')
-lyrics_saved
+#lyrics_saved = load('all_lyrics.joblib')
+#lyrics_saved
 ```
 
 ```{python}
-lyrics_df = pd.DataFrame(lyrics_saved)
+#| echo: true
+#| results: true
+#| fig-show: true
+#lyrics_df = pd.DataFrame(lyrics_saved)
+lyrics_df = pd.DataFrame(all_lyrics)
 lyrics_df
 
 ```
@@ -271,7 +285,9 @@ trans_lyrics_df
 
 
 ```{python}
-#VADER method
+#| echo: true
+#| results: true
+#| fig-show: true
 
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
@@ -356,6 +372,7 @@ genres_df
 Reordering and plotting playlist from happiest to saddest
 
 ```{python}
+
 import plotly.express as px
 
 #for model outputs that are all on a positive scale, flips the sign to represent negative sentiment
@@ -650,6 +667,9 @@ def analyze_playlist(playlist_url, model='vader'):
 
 
 ```{python}
+#| echo: true
+#| results: true
+#| fig-show: true
 test_url = "https://music.apple.com/us/playlist/best-of-the-best/pl.u-XkD0YzMfDYd17j9"
 
 fig, sorted_df = analyze_playlist(test_url, model='textblob')

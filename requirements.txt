@@ -8,4 +8,8 @@ textblob
 transformers
 torch
 tqdm
-
+fastapi
+nbclient
+jupyter
+ipykernel
+uvicorn
