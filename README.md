@@ -12,8 +12,7 @@ provides visualizations of sentiment rankings.
 ## Usage Pipeline
 
 The project includes a complete pipeline function that handles all steps
-from playlist URL to sentiment-ranked resul Creating functions and
-pipeline for different playlists:
+from song scraping to sentiment-ranked results. The function takes in the public Apple Music Playlist URL and the sentiment analysis model of choice, and outputs a dataframe and chart displaying the songs in order of sentiment:
 
 ### Example Usage
 
